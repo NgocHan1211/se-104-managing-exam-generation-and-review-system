@@ -85,54 +85,83 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [role, setRole] = useState<AppRole | null>(null);
+  const location = useLocation();
 
   useEffect(() => {
     let active = true;
 
-    const applySession = async (session: any) => {
-      if (!active) return;
-      if (!session?.user) {
-        setIsAuthenticated(false);
-        setRole(null);
-        setAuthLoading(false);
+    const checkAuthSession = async () => {
+      // ⚡ 1. ƯU TIÊN KIỂM TRA PHIÊN DEMO TRONG LOCALSTORAGE
+      const demoRole = localStorage.getItem('demo_role') as AppRole | null;
+      if (demoRole === 'admin' || demoRole === 'lecturer') {
+        if (active) {
+          setIsAuthenticated(true);
+          setRole(demoRole);
+          setAuthLoading(false);
+        }
+        return;
+      }
+
+      // ⚡ 2. KIỂM TRA PHIÊN SUPABASE THỰC TẾ (NẾU KHÔNG PHẢI DEMO)
+      if (!supabase) {
+        if (active) setAuthLoading(false);
         return;
       }
 
       try {
-        const detectedRole = await fetchCurrentUserRole(session.user.id, session.user.email);
+        const { data } = await supabase.auth.getSession();
         if (!active) return;
-        setIsAuthenticated(true);
-        setRole(detectedRole);
+
+        if (data.session?.user) {
+          try {
+            const detectedRole = await fetchCurrentUserRole(data.session.user.id, data.session.user.email);
+            if (active) {
+              setIsAuthenticated(true);
+              setRole(detectedRole);
+            }
+          } catch {
+            if (active) {
+              setIsAuthenticated(true);
+              setRole(null);
+            }
+          }
+        } else {
+          setIsAuthenticated(false);
+          setRole(null);
+        }
       } catch {
-        if (!active) return;
-        setIsAuthenticated(true);
-        setRole(null);
+        if (active) {
+          setIsAuthenticated(false);
+          setRole(null);
+        }
       } finally {
         if (active) setAuthLoading(false);
       }
     };
 
-    if (!supabase) {
-      setAuthLoading(false);
+    void checkAuthSession();
+
+    if (supabase) {
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        const demoRole = localStorage.getItem('demo_role');
+        if (!demoRole && session?.user) {
+          void checkAuthSession();
+        } else if (!demoRole && !session) {
+          setIsAuthenticated(false);
+          setRole(null);
+        }
+      });
+
       return () => {
         active = false;
+        listener.subscription.unsubscribe();
       };
     }
 
-    void (async () => {
-      const { data } = await supabase.auth.getSession();
-      await applySession(data.session);
-    })();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      void applySession(session);
-    });
-
     return () => {
       active = false;
-      listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [location.pathname]);
 
   const adminHome = getRoleHome(role);
   const requireAuth = (element: JSX.Element, allow?: AppRole) => {

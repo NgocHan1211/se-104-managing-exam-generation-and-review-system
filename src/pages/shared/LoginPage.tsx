@@ -59,7 +59,6 @@ export default function LoginPage() {
         navigate('/shared/error', { replace: true });
       }
     } catch (e: any) {
-      // FALLBACK CHỐNG LỖI 403 / SERVER: Nếu Supabase lỗi, tự nhảy vào giao diện theo email
       if (cleanEmail.includes('admin')) {
         navigate('/admin/dashboard', { replace: true });
       } else if (cleanEmail) {
@@ -87,7 +86,7 @@ export default function LoginPage() {
           border: '1px solid #bae6fd',
           fontSize: '0.875rem'
         }}>
-          <p style={{ margin: 0, fontWeight: 600, color: '#0369a1' }}>💡 Tài khoản Demo trải nghiệm 2 giao diện:</p>
+          <p style={{ margin: 0, fontWeight: 600, color: '#0369a1' }}> Tài khoản Demo trải nghiệm 2 giao diện:</p>
           <ul style={{ margin: '6px 0 0 18px', padding: 0, color: '#0c4a6e', lineHeight: '1.4' }}>
             <li><b>Admin:</b> <code>admin@demo.com</code> (Mật khẩu tùy ý)</li>
             <li><b>Giảng viên:</b> <code>lecturer@demo.com</code> (Mật khẩu tùy ý)</li>
